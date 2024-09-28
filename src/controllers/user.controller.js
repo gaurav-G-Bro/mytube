@@ -5,7 +5,6 @@ import { uploadOnCloudinary } from '../utils/cloudinary.upload.js';
 import { User } from '../models/user.model.js';
 import { generateAccessTokenAndRefreshToken } from '../utils/genAccessRefreshToken.js';
 import { OPTIONS_COOKIE } from '../constants/constant.js';
-import { verfifyToken } from '../middlewares/auth.middleware.js';
 
 const registerUser = asyncHandler(async (req, res) => {
   try {
@@ -108,6 +107,9 @@ const loginUser = asyncHandler(async (req, res) => {
     const { accessToken, refreshToken } =
       await generateAccessTokenAndRefreshToken(user._id);
 
+    user.refreshToken = refreshToken;
+    await user.save();
+
     const existedUser = await User.findById(user._id).select(
       '-password -refreshToken'
     );
@@ -132,10 +134,10 @@ const logoutUser = asyncHandler(async (req, res) => {
   try {
     if (!req?.user) {
       return res
-        .status(200)
+        .status(400)
         .clearCookie('accessToken', OPTIONS_COOKIE)
         .clearCookie('refreshToken', OPTIONS_COOKIE)
-        .json(new ApiResponse(200, 'User already logged out'));
+        .json(new ApiResponse(400, 'User already logged out'));
     }
 
     const userId = req.user._id;
@@ -153,7 +155,6 @@ const logoutUser = asyncHandler(async (req, res) => {
       .clearCookie('refreshToken', OPTIONS_COOKIE)
       .json(new ApiResponse(200, 'user logged out successfully'));
   } catch (error) {
-    console.log(error);
     throw new ApiError(error.statusCode, error.message);
   }
 });
