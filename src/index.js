@@ -1,0 +1,15 @@
+import { app } from './app.js';
+import { DB_CONNECT } from './db/db.connection.js';
+
+DB_CONNECT()
+  .then(() => {
+    app.listen(process.env.PORT);
+    console.log(`Server is running on port ${process.env.PORT}`);
+  })
+  .catch((err) => console.log('Server connection error: ', err));
+
+//All Route's imports are here
+import userRoute from './routes/user.route.js';
+
+//declared routes
+app.use('/api/v1/users', userRoute);
