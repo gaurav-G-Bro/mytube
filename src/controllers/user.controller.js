@@ -5,6 +5,7 @@ import { uploadOnCloudinary } from '../utils/cloudinary.upload.js';
 import { User } from '../models/user.model.js';
 import { generateAccessTokenAndRefreshToken } from '../utils/genAccessRefreshToken.js';
 import { OPTIONS_COOKIE } from '../constants/constant.js';
+import mongoose from 'mongoose';
 
 const registerUser = asyncHandler(async (req, res) => {
   try {
@@ -168,7 +169,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       await generateAccessTokenAndRefreshToken(req.user?._id);
     req.user.refreshToken = refreshToken;
 
-    res
+    return res
       .status(200)
       .cookie('accessToken', accessToken)
       .cookie('refreshToken', refreshToken)
@@ -214,7 +215,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     user.password = newPassword;
     await user.save();
 
-    res
+    return res
       .status(200)
       .json(
         new ApiResponse(
@@ -233,7 +234,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     const user = req.user;
     if (!user) throw new ApiError(404, 'User not logged in');
 
-    res
+    return res
       .status(200)
       .json(new ApiResponse(200, user, 'user fetched successfully'));
   } catch (error) {
@@ -269,7 +270,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
     if (!userDetails) throw new ApiError(500, 'Failed to update user account');
 
-    res
+    return res
       .status(200)
       .json(
         new ApiResponse(
@@ -309,12 +310,175 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
       { new: true }
     );
 
-    res
+    return res.status(200).json(
+      new ApiResponse(200, 'avatar updated successfully', {
+        avatar: user.avatar,
+      })
+    );
+  } catch (error) {
+    throw new ApiError(error.statusCode, error.message);
+  }
+});
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  try {
+    if (!req.user) throw new ApiError(400, 'user not logged in');
+
+    if (!req.file) throw new ApiError(400, 'cover Image is required');
+
+    const coverImageLocalPath = req.file ? req.file.path : null;
+    if (!coverImageLocalPath)
+      throw new ApiError(500, 'failed to upload image, try again');
+
+    const uploadStatus = await uploadOnCloudinary(coverImageLocalPath);
+    if (!uploadStatus)
+      throw new ApiError(
+        500,
+        'something went wrong while uploading cover image'
+      );
+
+    const userId = req.user?._id;
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          coverImage: uploadStatus.url,
+        },
+      },
+      { new: true }
+    );
+
+    return res.status(200).json(
+      new ApiResponse(200, 'cover image updated successfully', {
+        coverImage: user.coverImage,
+      })
+    );
+  } catch (error) {
+    throw new ApiError(error.statusCode, error.message);
+  }
+});
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+  try {
+    if (!req.user) throw new ApiError(400, 'User not logged in');
+    if (!username) throw new ApiError(400, 'Invalid username');
+
+    const channel = await User.aggregate([
+      {
+        $match: {
+          username: username.toLowerCase(),
+        },
+      },
+      {
+        $lookup: {
+          from: '$subscriptions',
+          localField: '_id',
+          foreignField: 'channel',
+          as: 'subscribers',
+        },
+      },
+      {
+        $lookup: {
+          from: 'subscriptions',
+          localField: '_id',
+          foreignField: 'subscriber',
+          as: 'subscribedTo',
+        },
+      },
+      {
+        $addFields: {
+          subscriberCount: {
+            $size: '$subscribers',
+          },
+          subscribedToCount: {
+            $size: '$subscribedTo',
+          },
+          isSubscribed: {
+            $cond: {
+              if: { $in: [req.user?._id, '$subscribers.subscribe'] },
+              then: true,
+              else: false,
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          username: 1,
+          email: 1,
+          fullName: 1,
+          avatar: 1,
+          coverImage: 1,
+          subscribedToCount: 1,
+          subscriberCount: 1,
+          isSubscribed: 1,
+        },
+      },
+    ]);
+
+    if (!channel.length) throw new ApiError(400, 'Channel does not exist');
+    return res
       .status(200)
       .json(
-        new ApiResponse(200, 'avatar updated successfully', {
-          avatar: user.avatar,
-        })
+        new ApiResponse(200, 'Channel profile fetched successfully', channel[0])
+      );
+  } catch (error) {
+    throw new ApiError(error.statusCode, error.message);
+  }
+});
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = req.user;
+  try {
+    if (!user) throw new ApiError(400, 'user not logged in');
+
+    const existedUser = await User.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(user._id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'videos',
+          localField: 'watchHistory',
+          foreignField: '_id',
+          as: 'watchHistory',
+          pipeline: [
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'owner',
+                foreignField: '_id',
+                as: 'owner',
+              },
+            },
+            {
+              $addFields: {
+                owner: {
+                  $first: '$owner',
+                },
+              },
+            },
+          ],
+        },
+      },
+      {
+        $project: {
+          fullName: 1,
+          username: 1,
+          avatar: 1,
+          owner: 1,
+          watchHistory: 1,
+        },
+      },
+    ]);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, 'watch history fetched successfully', existedUser)
       );
   } catch (error) {
     throw new ApiError(error.statusCode, error.message);
@@ -330,11 +494,7 @@ export {
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
+  updateUserCoverImage,
+  getUserChannelProfile,
+  getWatchHistory,
 };
-
-// export {
-// 	 updateUserAvatar,
-// 	 updateUserCoverImage,
-// 	 getUserChannelProfile,
-// 	 getWatchHistory
-// 	};
