@@ -8,15 +8,15 @@ import {
   updateVideo,
 } from '../controllers/video.controller.js';
 import { verifyToken } from '../middlewares/auth.middleware.js';
-import { upload } from '../middlewares/multer.middleware.js';
+import { upload } from '../middlewares/multer.upload.js';
 
 const router = Router();
-router.use(verifyToken);
 
 router
   .route('/')
-  .get(getAllVideos)
+  .get(verifyToken, getAllVideos)
   .post(
+    verifyToken,
     upload.fields([
       {
         name: 'videoFile',
@@ -32,10 +32,12 @@ router
 
 router
   .route('/:videoId')
-  .get(getVideoById)
-  .delete(deleteVideo)
-  .patch(upload.single('thumbnail'), updateVideo);
+  .get(verifyToken, getVideoById)
+  .delete(verifyToken, deleteVideo)
+  .patch(verifyToken, upload.single('thumbnail'), updateVideo);
 
-router.route('/toggle/publish/:videoId').patch(togglePublishStatus);
+router
+  .route('/toggle/publish/:videoId')
+  .patch(verifyToken, togglePublishStatus);
 
 export default router;
