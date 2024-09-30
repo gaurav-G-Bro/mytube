@@ -10,6 +10,8 @@ DB_CONNECT()
 
 //All Route's imports are here
 import userRoute from './routes/user.route.js';
+import subscriptionRoute from './routes/subscription.route.js';
 
 //declared routes
 app.use('/api/v1/users', userRoute);
+app.use('/api/v1/subscriptions', subscriptionRoute);
