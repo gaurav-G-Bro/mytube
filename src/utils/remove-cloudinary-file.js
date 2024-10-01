@@ -14,7 +14,12 @@ const removeFileFromCloudinary = async (publicId) => {
     const removedFileStatus = await cloudinary.uploader.destroy(publicId, {
       resource_type: 'image',
     });
-    if (!removedFileStatus)
+
+    const removedVideoStatus = await cloudinary.uploader.destroy(publicId, {
+      resource_type: 'video',
+    });
+
+    if (!removedFileStatus || !removedVideoStatus)
       throw new ApiError(500, 'failed to remove the file from cloudinary');
     return removedFileStatus ? true : false;
   } catch (error) {
