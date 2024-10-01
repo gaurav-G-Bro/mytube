@@ -6,6 +6,8 @@ import { User } from '../models/user.model.js';
 import { generateAccessTokenAndRefreshToken } from '../utils/genAccessRefreshToken.js';
 import { OPTIONS_COOKIE } from '../constants/constant.js';
 import mongoose from 'mongoose';
+import { get_cloudinary_file_publicId } from '../utils/get-public-id-cloudinary-files.js';
+import { removeFileFromCloudinary } from '../utils/remove-cloudinary-file.js';
 
 const registerUser = asyncHandler(async (req, res) => {
   try {
@@ -63,8 +65,12 @@ const registerUser = asyncHandler(async (req, res) => {
       coverImage: coverImageUrl,
     };
 
-    const user = await User.create(userData);
-    if (!user) throw new ApiError(500, 'user not registered, please try again');
+    let user;
+    if (avatarUrl) {
+      user = await User.create(userData);
+      if (!user)
+        throw new ApiError(500, 'user not registered, please try again');
+    }
 
     const userDetails = await User.findById(user._id).select(
       '-password -refreshToken'
@@ -295,12 +301,24 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     if (!avatarLocalPath)
       throw new ApiError(500, 'failed to upload file or image, try again');
 
-    const uploadStatus = await uploadOnCloudinary(avatarLocalPath);
-    if (!uploadStatus)
-      throw new ApiError(500, 'something went wrong while uploading avatar');
+    const user = await User.findById(req.user._id);
+    const existingAvatarUrl = await user.avatar;
+    const publicId = await get_cloudinary_file_publicId(existingAvatarUrl);
+    if (!publicId) throw new ApiError(400, 'Invalid url');
+
+    const removedAvatarStatus = await removeFileFromCloudinary(publicId);
+    if (!removedAvatarStatus)
+      throw new ApiError(500, 'failed to remove avatar file, try again');
+
+    let uploadStatus;
+    if (removedAvatarStatus) {
+      uploadStatus = await uploadOnCloudinary(avatarLocalPath);
+      if (!uploadStatus)
+        throw new ApiError(500, 'something went wrong while uploading avatar');
+    }
 
     const userId = req.user?._id;
-    const user = await User.findByIdAndUpdate(
+    const userData = await User.findByIdAndUpdate(
       userId,
       {
         $set: {
@@ -312,7 +330,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
     return res.status(200).json(
       new ApiResponse(200, 'avatar updated successfully', {
-        avatar: user.avatar,
+        avatar: userData.avatar,
       })
     );
   } catch (error) {
@@ -330,15 +348,27 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     if (!coverImageLocalPath)
       throw new ApiError(500, 'failed to upload image, try again');
 
-    const uploadStatus = await uploadOnCloudinary(coverImageLocalPath);
-    if (!uploadStatus)
-      throw new ApiError(
-        500,
-        'something went wrong while uploading cover image'
-      );
+    const user = await User.findById(req.user._id);
+    const existingCoverImageUrl = await user.coverImage;
+    const publicId = await get_cloudinary_file_publicId(existingCoverImageUrl);
+    if (!publicId) throw new ApiError(400, 'Invalid url');
+
+    const removedCoverImageStatus = await removeFileFromCloudinary(publicId);
+    if (!removedCoverImageStatus)
+      throw new ApiError(500, 'failed to remove cover Image, try again');
+
+    let uploadStatus;
+    if (removedCoverImageStatus) {
+      uploadStatus = await uploadOnCloudinary(coverImageLocalPath);
+      if (!uploadStatus)
+        throw new ApiError(
+          500,
+          'something went wrong while uploading cover image'
+        );
+    }
 
     const userId = req.user?._id;
-    const user = await User.findByIdAndUpdate(
+    const userData = await User.findByIdAndUpdate(
       userId,
       {
         $set: {
@@ -350,7 +380,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
     return res.status(200).json(
       new ApiResponse(200, 'cover image updated successfully', {
-        coverImage: user.coverImage,
+        coverImage: userData.coverImage,
       })
     );
   } catch (error) {
