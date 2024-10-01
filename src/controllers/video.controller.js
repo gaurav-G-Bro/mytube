@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from 'mongoose';
+import mongoose from 'mongoose';
 import { Video } from '../models/video.model.js';
 import { User } from '../models/user.model.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -9,18 +9,61 @@ import { removeFileFromCloudinary } from '../utils/remove-cloudinary-file.js';
 import { get_cloudinary_file_publicId } from '../utils/get-public-id-cloudinary-files.js';
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType } = req.query;
+  const {
+    page = 1,
+    limit = 10,
+    query = '',
+    sortBy = 'createdAt',
+    sortType = 'desc',
+  } = req.query;
   const userId = req.user._id;
-  //TODO: get all videos based on query, sort, pagination
+
   try {
     if (!userId) throw new ApiError(400, 'user not logged in');
 
-    const videos = await Video.find({});
-    if (!videos) throw new ApiError(500, 'failed to fetch videos');
+    const sortOrder = sortType === 'asc' ? 1 : -1;
+
+    const video = await Video.aggregate([
+      {
+        $match: query
+          ? {
+              title: {
+                $regex: query,
+                $options: 'i',
+              },
+            }
+          : {},
+      },
+      {
+        $facet: {
+          totalCount: [{ $count: 'count' }],
+          videos: [
+            { $sort: { [sortBy]: sortOrder } },
+            { $skip: (page - 1) * parseInt(limit) },
+            { $limit: parseInt(limit) },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          totalCount: { $arrayElemAt: ['$totalCount.count', 0] },
+        },
+      },
+    ]);
+
+    const totalCount = video[0].totalCount || 0;
+    const videosData = video[0].videos;
 
     const videoStatus =
-      videos.length > 0 ? 'videos fetched successfully' : 'No video found';
-    return res.status(200).json(new ApiResponse(200, videoStatus, videos));
+      videosData.length > 0 ? 'Videos fetched successfully' : 'No video found';
+
+    return res.status(200).json(
+      new ApiResponse(200, videoStatus, videosData, {
+        totalCount,
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalCount / limit),
+      })
+    );
   } catch (error) {
     throw new ApiError(error.statusCode, error.message);
   }
