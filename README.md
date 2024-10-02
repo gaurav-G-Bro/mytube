@@ -22,7 +22,7 @@ A Node.js-based video watching  and surfing app with **Express.js**, **Mongoose*
 
 1. **Clone the repository:**
     ```bash
-    git clone https://github.com/gaurav-G-Bro/edunova-assessment.git
+    git clone https://github.com/gaurav-G-Bro/mytube.git
     ```
 
 2. **Install the dependencies:**
