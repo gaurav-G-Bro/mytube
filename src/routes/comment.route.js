@@ -9,9 +9,13 @@ import {
 
 const router = Router();
 
-router.use(verifyToken);
-
-router.route('/:videoId').get(getVideoComments).post(addComment);
-router.route('/c/:commentId').delete(deleteComment).patch(updateComment);
+router
+  .route('/:videoId')
+  .get(verifyToken, getVideoComments)
+  .post(verifyToken, addComment);
+router
+  .route('/c/:commentId')
+  .delete(verifyToken, deleteComment)
+  .patch(verifyToken, updateComment);
 
 export default router;
