@@ -12,19 +12,21 @@ import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-router.use(verifyToken);
-
-router.route('/').post(createPlaylist);
+router.route('/').post(verifyToken, createPlaylist);
 
 router
   .route('/:playlistId')
-  .get(getPlaylistById)
-  .patch(updatePlaylist)
-  .delete(deletePlaylist);
+  .get(verifyToken, getPlaylistById)
+  .patch(verifyToken, updatePlaylist)
+  .delete(verifyToken, deletePlaylist);
 
-router.route('/add/:videoId/:playlistId').patch(addVideoToPlaylist);
-router.route('/remove/:videoId/:playlistId').patch(removeVideoFromPlaylist);
+router
+  .route('/add/:videoId/:playlistId')
+  .patch(verifyToken, addVideoToPlaylist);
+router
+  .route('/remove/:videoId/:playlistId')
+  .patch(verifyToken, removeVideoFromPlaylist);
 
-router.route('/user/:userId').get(getUserPlaylists);
+router.route('/user/:userId').get(verifyToken, getUserPlaylists);
 
 export default router;
