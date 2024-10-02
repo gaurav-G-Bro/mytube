@@ -8,11 +8,10 @@ import {
 import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = Router();
-router.use(verifyToken);
 
-router.route('/toggle/v/:videoId').post(toggleVideoLike);
-router.route('/toggle/c/:commentId').post(toggleCommentLike);
-router.route('/toggle/t/:tweetId').post(toggleTweetLike);
-router.route('/videos').get(getLikedVideos);
+router.route('/toggle/v/:videoId').post(verifyToken, toggleVideoLike);
+router.route('/toggle/c/:commentId').post(verifyToken, toggleCommentLike);
+router.route('/toggle/t/:tweetId').post(verifyToken, toggleTweetLike);
+router.route('/videos').get(verifyToken, getLikedVideos);
 
 export default router;

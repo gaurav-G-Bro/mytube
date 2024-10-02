@@ -12,8 +12,10 @@ DB_CONNECT()
 import userRoute from './routes/user.route.js';
 import subscriptionRoute from './routes/subscription.route.js';
 import videoRoute from './routes/video.route.js';
+import likeRoute from './routes/like.route.js';
 
 //declared routes
 app.use('/api/v1/users', userRoute);
 app.use('/api/v1/subscriptions', subscriptionRoute);
 app.use('/api/v1/videos', videoRoute);
+app.use('/api/v1/likes', likeRoute);
