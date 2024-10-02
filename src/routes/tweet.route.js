@@ -8,10 +8,12 @@ import {
 import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = Router();
-router.use(verifyToken);
 
-router.route('/').post(createTweet);
-router.route('/user/:userId').get(getUserTweets);
-router.route('/:tweetId').patch(updateTweet).delete(deleteTweet);
+router.route('/').post(verifyToken, createTweet);
+router.route('/user/:userId').get(verifyToken, getUserTweets);
+router
+  .route('/:tweetId')
+  .patch(verifyToken, updateTweet)
+  .delete(verifyToken, deleteTweet);
 
 export default router;

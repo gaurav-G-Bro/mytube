@@ -114,7 +114,9 @@ const getLikedVideos = asyncHandler(async (req, res) => {
   try {
     if (!req.user) throw new ApiError(400, 'user not logged in');
 
-    const likedVids = await Like.find();
+    const likedVids = await Like.find({
+      likedBy: req.user._id,
+    });
 
     const likedVidsStatus =
       !likedVids.length > 0

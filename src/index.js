@@ -14,6 +14,7 @@ import subscriptionRoute from './routes/subscription.route.js';
 import videoRoute from './routes/video.route.js';
 import likeRoute from './routes/like.route.js';
 import commentRoute from './routes/comment.route.js';
+import tweetRoute from './routes/tweet.route.js';
 
 //declared routes
 app.use('/api/v1/users', userRoute);
@@ -21,3 +22,4 @@ app.use('/api/v1/subscriptions', subscriptionRoute);
 app.use('/api/v1/videos', videoRoute);
 app.use('/api/v1/likes', likeRoute);
 app.use('/api/v1/comments', commentRoute);
+app.use('/api/v1/tweets', tweetRoute);
