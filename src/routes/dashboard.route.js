@@ -7,9 +7,7 @@ import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-router.use(verifyToken);
-
-router.route('/stats').get(getChannelStats);
-router.route('/videos').get(getChannelVideos);
+router.route('/stats').get(verifyToken, getChannelStats);
+router.route('/videos').get(verifyToken, getChannelVideos);
 
 export default router;

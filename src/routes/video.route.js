@@ -6,6 +6,7 @@ import {
   publishAVideo,
   togglePublishStatus,
   updateVideoThumbnail,
+  incrementViews,
 } from '../controllers/video.controller.js';
 import { verifyToken } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.upload.js';
@@ -40,4 +41,5 @@ router
   .route('/toggle/publish/:videoId')
   .patch(verifyToken, togglePublishStatus);
 
+router.route('/:videoId/views').post(verifyToken, incrementViews);
 export default router;

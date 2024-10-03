@@ -256,6 +256,29 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
   }
 });
 
+const incrementViews = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  try {
+    if (!req.user) throw new ApiError(400, 'user not logged in');
+    if (!videoId) throw new ApiError(400, '');
+
+    const viewsOnVideo = await Video.findByIdAndUpdate(
+      videoId,
+      {
+        $inc: {
+          views: 1,
+        },
+      },
+      { new: true }
+    );
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, 'views incremented successfully'));
+  } catch (error) {
+    throw new ApiError(error.statusCode, error.message);
+  }
+});
 export {
   getAllVideos,
   publishAVideo,
@@ -263,4 +286,5 @@ export {
   updateVideoThumbnail,
   deleteVideo,
   togglePublishStatus,
+  incrementViews,
 };
